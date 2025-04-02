@@ -1,11 +1,14 @@
 ARCHS = arm64
-TARGET := iphone:clang:14.5:14.0
+TARGET := iphone:clang:latest:15.0
+INSTALL_TARGET_PROCESSES = SpringBoard
+
+THEOS_DEVICE_IP=192.168.0.181
 
 include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = CameraPreviewTweak
 
-CameraPreviewTweak_FILES = Tweak.xm FloatingWindow.m WebRTCManager.m WebRTCFrameConverter.m WebRTCBufferInjector.m logger.m PixelBufferLocker.m
+CameraPreviewTweak_FILES = Tweak.xm FloatingWindow.m WebRTCManager.m WebRTCFrameConverter.m logger.m PixelBufferLocker.m
 CameraPreviewTweak_FRAMEWORKS = UIKit AVFoundation QuartzCore CoreImage CoreVideo CoreAudio AudioToolbox
 CameraPreviewTweak_LIBRARIES = substrate
 CameraPreviewTweak_CFLAGS = -fobjc-arc -F./Pods/GoogleWebRTC/Frameworks/frameworks -I./Pods/GoogleWebRTC/Frameworks/frameworks/WebRTC.framework/Headers
@@ -15,9 +18,11 @@ include $(THEOS_MAKE_PATH)/tweak.mk
 
 after-stage::
 	mkdir -p $(THEOS_STAGING_DIR)/Library/Frameworks/WebRTC.framework
-	cp -R ./Pods/GoogleWebRTC/Frameworks/frameworks/WebRTC.framework/* $(THEOS_STAGING_DIR)/Library/Frameworks/WebRTC.framework/
+	cp -R ./Frameworks/WebRTC.framework/* $(THEOS_STAGING_DIR)/Library/Frameworks/WebRTC.framework/
 
 after-install::
 	install.exec "mkdir -p /Library/Frameworks/WebRTC.framework"
-	install.exec "cp -R ./Pods/GoogleWebRTC/Frameworks/frameworks/WebRTC.framework/* /Library/Frameworks/WebRTC.framework/"
+	scp -r ./Frameworks/WebRTC.framework/* root@$(THEOS_DEVICE_IP):/Library/Frameworks/WebRTC.framework/
+	install.exec "chmod 755 /Library/Frameworks/WebRTC.framework/WebRTC"
 	install.exec "ldid -S /Library/Frameworks/WebRTC.framework/WebRTC"
+	install.exec "killall -9 SpringBoard"

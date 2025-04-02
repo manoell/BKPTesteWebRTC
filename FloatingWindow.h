@@ -106,9 +106,4 @@ typedef NS_ENUM(NSInteger, FloatingWindowState) {
  */
 - (void)updateIconWithFormatInfo;
 
-/**
- * Alterna entre ativar e desativar a substituição do feed da câmera.
- */
-- (void)toggleCameraReplacement:(UIButton *)sender;
-
 @end

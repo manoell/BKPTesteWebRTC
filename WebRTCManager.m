@@ -28,23 +28,9 @@ NSString *const kCameraChangeNotification = @"AVCaptureDeviceSubjectAreaDidChang
 
 // Timer management
 @property (nonatomic, strong) NSTimer *statsTimer;
-
-@property (nonatomic, assign) BOOL videoMirrored;
 @end
 
 @implementation WebRTCManager
-
-#pragma mark - Singleton Implementation
-
-+ (instancetype)sharedInstance {
-    static WebRTCManager *instance = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        // Criar instância sem FloatingWindow para uso como singleton
-        instance = [[self alloc] initWithFloatingWindow:nil];
-    });
-    return instance;
-}
 
 #pragma mark - Initialization & Lifecycle
 
@@ -699,44 +685,44 @@ NSString *const kCameraChangeNotification = @"AVCaptureDeviceSubjectAreaDidChang
 #pragma mark - WebSocket Connection
 
 - (void)connectWebSocket {
-    // Garantir que qualquer conexão antiga seja encerrada adequadamente
-    if (self.webSocketTask) {
-        NSURLSessionWebSocketTask *oldTask = self.webSocketTask;
-        self.webSocketTask = nil;
-        [oldTask cancel];
-    }
-    
-    // Construir URL do servidor
-    NSString *urlString = [NSString stringWithFormat:@"ws://%@:8080", self.serverIP];
-    NSURL *url = [NSURL URLWithString:urlString];
-    
-    // Verificar URL antes de continuar
-    if (!url) {
-        writeErrorLog(@"[WebRTCManager] URL inválida para conexão WebSocket: %@", urlString);
-        if ([self respondsToSelector:@selector(updateConnectionStatus:)]) {
-            [self updateConnectionStatus:@"Erro: endereço do servidor inválido"];
-        } else if (self.floatingWindow) {
-            [self.floatingWindow updateConnectionStatus:@"Erro: endereço do servidor inválido"];
+    @try {
+        // URL para o servidor
+        NSString *urlString = [NSString stringWithFormat:@"ws://%@:8080", self.serverIP];
+        NSURL *url = [NSURL URLWithString:urlString];
+        
+        // Configurar URL Request com timeouts aumentados
+        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
+        request.timeoutInterval = 60.0; // Aumentar para 60 segundos
+        
+        // Configurar a sessão com timeout mais longo
+        NSURLSessionConfiguration *sessionConfig = [NSURLSessionConfiguration defaultSessionConfiguration];
+        sessionConfig.timeoutIntervalForRequest = 60.0;     // 60 segundos
+        sessionConfig.timeoutIntervalForResource = 120.0;   // 2 minutos
+        
+        // Criar sessão e task WebSocket
+        if (self.session) {
+            [self.session invalidateAndCancel];
         }
-        self.state = WebRTCManagerStateError;
-        return;
-    }
-    
-    // Criar nova sessão se necessário
-    if (!self.session) {
-        self.session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration defaultSessionConfiguration]
+        self.session = [NSURLSession sessionWithConfiguration:sessionConfig
                                                      delegate:self
                                                 delegateQueue:[NSOperationQueue mainQueue]];
+        
+        self.webSocketTask = [self.session webSocketTaskWithRequest:request];
+        
+        // Iniciar recepção de mensagens
+        [self receiveWebSocketMessage];
+        
+        // Conectar
+        [self.webSocketTask resume];
+        
+        // Depois que a conexão for estabelecida, enviar JOIN com um pequeno delay
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [self sendJoinMessage];
+        });
+    } @catch (NSException *exception) {
+        writeErrorLog(@"[WebRTCManager] Exceção ao conectar WebSocket: %@", exception);
+        self.state = WebRTCManagerStateError;
     }
-    
-    writeLog(@"[WebRTCManager] Conectando ao WebSocket: %@", urlString);
-    
-    // Criar e iniciar a tarefa WebSocket
-    self.webSocketTask = [self.session webSocketTaskWithURL:url];
-    [self.webSocketTask resume];
-    
-    // Configurar recepção de mensagens
-    [self receiveWebSocketMessage];
 }
 
 // Novo método separado para enviar JOIN
@@ -1953,55 +1939,6 @@ NSString *const kCameraChangeNotification = @"AVCaptureDeviceSubjectAreaDidChang
     return [self.frameConverter getLatestSampleBufferWithFormat:format];
 }
 
-- (void)adaptOutputToVideoOrientation:(int)orientation {
-    // Orientação só é relevante se tivermos buffer converter
-    if (!self.frameConverter) return;
-    
-    writeVerboseLog(@"[WebRTCManager] Adaptando saída para orientação %d", orientation);
-    
-    // Atualizar orientação nos metadados
-    NSString *orientationStr;
-    switch (orientation) {
-        case 1: // AVCaptureVideoOrientationPortrait
-            orientationStr = @"Portrait";
-            break;
-        case 2: // AVCaptureVideoOrientationPortraitUpsideDown
-            orientationStr = @"PortraitUpsideDown";
-            break;
-        case 3: // AVCaptureVideoOrientationLandscapeRight
-            orientationStr = @"LandscapeRight";
-            break;
-        case 4: // AVCaptureVideoOrientationLandscapeLeft
-            orientationStr = @"LandscapeLeft";
-            break;
-        default:
-            orientationStr = @"Unknown";
-    }
-    
-    if (self.floatingWindow) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [self.floatingWindow updateConnectionStatus:[NSString stringWithFormat:@"Orientação: %@", orientationStr]];
-        });
-    }
-}
-
-- (void)setVideoMirrored:(BOOL)mirrored {
-    writeLog(@"[WebRTCManager] Configurando espelhamento de vídeo: %@", mirrored ? @"SIM" : @"NÃO");
-    
-    // Armazenar configuração para uso ao processar frames
-    _videoMirrored = mirrored;
-    
-    // Atualizar configuração no frameConverter
-    [self setMirrorOutput:mirrored];
-    
-    // Atualizar status na FloatingWindow
-    if (self.floatingWindow) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [self.floatingWindow updateConnectionStatus:[NSString stringWithFormat:@"Espelhamento: %@", mirrored ? @"Ativado" : @"Desativado"]];
-        });
-    }
-}
-
 - (void)setIOSCompatibilitySignaling:(BOOL)enable {
     _iosCompatibilitySignalingEnabled = enable;
     writeLog(@"[WebRTCManager] Sinalização de compatibilidade iOS %@", enable ? @"ativada" : @"desativada");
@@ -2204,28 +2141,6 @@ NSString *const kCameraChangeNotification = @"AVCaptureDeviceSubjectAreaDidChang
             writeWarningLog(@"[WebRTCManager] frameConverter não implementa setCaptureSessionClock:");
         }
     }
-}
-
-- (void)setMirrorOutput:(BOOL)mirror {
-    // Apenas encaminhar chamada para o frameConverter
-    if (self.frameConverter) {
-        // Só chamamos se o frameConverter já tiver o método
-        if ([self.frameConverter respondsToSelector:@selector(setMirrorOutput:)]) {
-            [self.frameConverter setMirrorOutput:mirror];
-        } else {
-            writeWarningLog(@"[WebRTCManager] frameConverter não implementa setMirrorOutput:");
-        }
-    }
-}
-
-/**
- * Atualiza o status de conexão.
- * @param status Texto descritivo do status de conexão.
- */
-- (void)updateConnectionStatus:(NSString *)status {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self.floatingWindow updateConnectionStatus:status];
-    });
 }
 
 @end

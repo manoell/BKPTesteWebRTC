@@ -65,8 +65,6 @@
     // Para evitar uso excessivo de memória
     NSUInteger _maxCachedSampleBuffers;
     NSMutableDictionary<NSNumber *, NSValue *> *_sampleBufferCache; // Map de formato para sample buffer
-    
-    BOOL _mirrorOutput;
 }
 
 @synthesize frameCount = _frameCount;
@@ -890,13 +888,7 @@
                                             // Aplicar rotação conforme necessário
                                             image = [self rotateImage:originalImage withRotation:frame.rotation];
                                         } else {
-                                            if (_mirrorOutput) {
-                                                // Criar imagem espelhada
-                                                UIImage *originalImage = [UIImage imageWithCGImage:cgImage];
-                                                image = [self mirrorImage:originalImage];
-                                            } else {
-                                                image = [UIImage imageWithCGImage:cgImage];
-                                            }
+                                            image = [UIImage imageWithCGImage:cgImage];
                                             CGImageRelease(cgImage);
                                         }
                                     }
@@ -943,13 +935,7 @@
                                 
                                 image = [self rotateImage:originalImage withRotation:frame.rotation];
                             } else {
-                                if (_mirrorOutput) {
-                                    // Criar imagem espelhada
-                                    UIImage *originalImage = [UIImage imageWithCGImage:cgImage];
-                                    image = [self mirrorImage:originalImage];
-                                } else {
-                                    image = [UIImage imageWithCGImage:cgImage];
-                                }
+                                image = [UIImage imageWithCGImage:cgImage];
                                 CGImageRelease(cgImage);
                             }
                         }
@@ -1889,23 +1875,6 @@
     return success;
 }
 
-- (UIImage *)mirrorImage:(UIImage *)image {
-    if (!image) return nil;
-    
-    UIGraphicsBeginImageContextWithOptions(image.size, NO, image.scale);
-    CGContextRef context = UIGraphicsGetCurrentContext();
-    
-    // Inverter horizontalmente
-    CGContextTranslateCTM(context, image.size.width, 0);
-    CGContextScaleCTM(context, -1.0, 1.0);
-    
-    [image drawInRect:CGRectMake(0, 0, image.size.width, image.size.height)];
-    UIImage *mirroredImage = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
-    
-    return mirroredImage ?: image;
-}
-
 #pragma mark - Métodos de Interface Pública
 
 - (UIImage *)getLastFrameAsImage {
@@ -2421,11 +2390,6 @@
     }
     
     return !shouldDrop;
-}
-
-- (void)setMirrorOutput:(BOOL)mirror {
-    _mirrorOutput = mirror;
-    writeLog(@"[WebRTCFrameConverter] Saída espelhada: %@", mirror ? @"SIM" : @"NÃO");
 }
 
 @end

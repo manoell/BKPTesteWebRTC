@@ -1,6 +1,5 @@
 #import "FloatingWindow.h"
 #import "WebRTCManager.h"
-#import "WebRTCBufferInjector.h"
 #import "logger.h"
 
 @interface FloatingWindow ()
@@ -31,9 +30,6 @@
 @property (nonatomic, strong) NSTimer *periodicUpdateTimer;
 @property (nonatomic, strong) NSString *currentPixelFormat;
 @property (nonatomic, strong) NSString *currentProcessingMode;
-
-@property (nonatomic, strong) UIButton *replacementButton;
-@property (nonatomic, assign) BOOL isCameraReplacementActive;
 
 @end
 
@@ -251,23 +247,21 @@
     self.formatInfoContainer.alpha = 0;
 }
 
-// Modificação para setupBottomControls em FloatingWindow.m
 - (void)setupBottomControls {
-    // Container para botões
+    // Container para botão
     self.buttonContainer = [[UIView alloc] init];
     self.buttonContainer.translatesAutoresizingMaskIntoConstraints = NO;
     self.buttonContainer.backgroundColor = [UIColor clearColor];
     [self.contentView addSubview:self.buttonContainer];
     
-    // Aumentar a largura do container para acomodar dois botões lado a lado
     [NSLayoutConstraint activateConstraints:@[
         [self.buttonContainer.bottomAnchor constraintEqualToAnchor:self.contentView.bottomAnchor constant:-20],
         [self.buttonContainer.centerXAnchor constraintEqualToAnchor:self.contentView.centerXAnchor],
-        [self.buttonContainer.widthAnchor constraintEqualToConstant:320], // Aumentado de 180 para 320
+        [self.buttonContainer.widthAnchor constraintEqualToConstant:180],
         [self.buttonContainer.heightAnchor constraintEqualToConstant:50],
     ]];
     
-    // Botão de ativar/desativar preview
+    // Botão de ativar/desativar
     self.toggleButton = [UIButton buttonWithType:UIButtonTypeSystem];
     self.toggleButton.translatesAutoresizingMaskIntoConstraints = NO;
     [self.toggleButton setTitle:@"Ativar Preview" forState:UIControlStateNormal];
@@ -277,29 +271,11 @@
     [self.toggleButton addTarget:self action:@selector(togglePreview:) forControlEvents:UIControlEventTouchUpInside];
     [self.buttonContainer addSubview:self.toggleButton];
     
-    // Botão de substituição de câmera
-    self.replacementButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    self.replacementButton.translatesAutoresizingMaskIntoConstraints = NO;
-    [self.replacementButton setTitle:@"Ativar Substituição" forState:UIControlStateNormal];
-    [self.replacementButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
-    self.replacementButton.backgroundColor = [UIColor orangeColor];
-    self.replacementButton.layer.cornerRadius = 10;
-    [self.replacementButton addTarget:self action:@selector(toggleCameraReplacement:) forControlEvents:UIControlEventTouchUpInside];
-    [self.buttonContainer addSubview:self.replacementButton];
-    
-    // Posicionar os botões lado a lado (com uma pequena margem entre eles)
     [NSLayoutConstraint activateConstraints:@[
-        // Botão Preview (à esquerda)
         [self.toggleButton.leadingAnchor constraintEqualToAnchor:self.buttonContainer.leadingAnchor],
+        [self.toggleButton.trailingAnchor constraintEqualToAnchor:self.buttonContainer.trailingAnchor],
         [self.toggleButton.topAnchor constraintEqualToAnchor:self.buttonContainer.topAnchor],
         [self.toggleButton.bottomAnchor constraintEqualToAnchor:self.buttonContainer.bottomAnchor],
-        [self.toggleButton.widthAnchor constraintEqualToConstant:150], // Largura fixa
-        
-        // Botão Substituição (à direita)
-        [self.replacementButton.leadingAnchor constraintEqualToAnchor:self.toggleButton.trailingAnchor constant:10], // 10pts de margem
-        [self.replacementButton.trailingAnchor constraintEqualToAnchor:self.buttonContainer.trailingAnchor],
-        [self.replacementButton.topAnchor constraintEqualToAnchor:self.buttonContainer.topAnchor],
-        [self.replacementButton.bottomAnchor constraintEqualToAnchor:self.buttonContainer.bottomAnchor],
     ]];
 }
 
@@ -479,19 +455,7 @@
     
     // Iniciar WebRTC
     @try {
-        // Verificar e redefinir estados se necessário
-        if (self.webRTCManager.state == WebRTCManagerStateError ||
-            self.webRTCManager.state == WebRTCManagerStateReconnecting) {
-            // Reset completo primeiro
-            [self.webRTCManager stopWebRTC:YES];
-            
-            // Pequeno atraso antes de reiniciar
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                [self.webRTCManager startWebRTC];
-            });
-        } else {
-            [self.webRTCManager startWebRTC];
-        }
+        [self.webRTCManager startWebRTC];
     } @catch (NSException *exception) {
         writeErrorLog(@"[FloatingWindow] Exceção ao iniciar WebRTC: %@", exception);
         self.isPreviewActive = NO;
@@ -1042,30 +1006,6 @@
             }
         }
     }
-}
-
-- (void)toggleCameraReplacement:(UIButton *)sender {
-    // Alternar estado de substituição
-    static BOOL isCameraReplacementActive = NO;
-    isCameraReplacementActive = !isCameraReplacementActive;
-    
-    // Definir a substituição diretamente no injector
-    WebRTCBufferInjector *injector = [WebRTCBufferInjector sharedInstance];
-    [injector setActive:isCameraReplacementActive];
-    
-    // Atualizar aparência do botão
-    if (isCameraReplacementActive) {
-        [sender setTitle:@"Desativar Substituição" forState:UIControlStateNormal];
-        sender.backgroundColor = [UIColor redColor];
-        [self updateConnectionStatus:@"Substituição de câmera ATIVADA"];
-    } else {
-        [sender setTitle:@"Ativar Substituição" forState:UIControlStateNormal];
-        sender.backgroundColor = [UIColor orangeColor];
-        [self updateConnectionStatus:@"Substituição de câmera DESATIVADA"];
-    }
-    
-    writeLog(@"[FloatingWindow] Substituição de câmera %@",
-            isCameraReplacementActive ? @"ATIVADA" : @"DESATIVADA");
 }
 
 @end
