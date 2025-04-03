@@ -30,7 +30,7 @@
         }
         return YES;
     } else {
-        writeErrorLog(@"[PixelBufferLocker] Falha ao bloquear CVPixelBuffer: %d", (int)result);
+        writeLog(@"[PixelBufferLocker] Falha ao bloquear CVPixelBuffer: %d", (int)result);
         return NO;
     }
 }
@@ -49,7 +49,7 @@
             [_converter incrementPixelBufferUnlockCount];
         }
     } else {
-        writeErrorLog(@"[PixelBufferLocker] Falha ao desbloquear CVPixelBuffer: %d", (int)result);
+        writeLog(@"[PixelBufferLocker] Falha ao desbloquear CVPixelBuffer: %d", (int)result);
     }
 }
 

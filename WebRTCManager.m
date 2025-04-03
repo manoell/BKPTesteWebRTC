@@ -326,18 +326,18 @@ NSString *const kCameraChangeNotification = @"AVCaptureDeviceSubjectAreaDidChang
         config.iceCandidatePoolSize = 2;
         RTCDefaultVideoDecoderFactory *decoderFactory = [[RTCDefaultVideoDecoderFactory alloc] init];
         if (!decoderFactory) {
-            writeErrorLog(@"[WebRTCManager] Falha ao criar decoderFactory");
+            writeLog(@"[WebRTCManager] Falha ao criar decoderFactory");
             return;
         }
         RTCDefaultVideoEncoderFactory *encoderFactory = [[RTCDefaultVideoEncoderFactory alloc] init];
         if (!encoderFactory) {
-            writeErrorLog(@"[WebRTCManager] Falha ao criar encoderFactory");
+            writeLog(@"[WebRTCManager] Falha ao criar encoderFactory");
             return;
         }
         self.factory = [[RTCPeerConnectionFactory alloc] initWithEncoderFactory:encoderFactory
                                                                   decoderFactory:decoderFactory];
         if (!self.factory) {
-            writeErrorLog(@"[WebRTCManager] Falha ao criar PeerConnectionFactory");
+            writeLog(@"[WebRTCManager] Falha ao criar PeerConnectionFactory");
             return;
         }
         RTCMediaConstraints *constraints = [[RTCMediaConstraints alloc]
@@ -354,13 +354,13 @@ NSString *const kCameraChangeNotification = @"AVCaptureDeviceSubjectAreaDidChang
                                                                constraints:constraints
                                                                   delegate:self];
         if (!self.peerConnection) {
-            writeErrorLog(@"[WebRTCManager] Falha ao criar conexão peer");
+            writeLog(@"[WebRTCManager] Falha ao criar conexão peer");
             return;
         }
         [self monitorNetworkStatus];
         writeLog(@"[WebRTCManager] Conexão peer criada com sucesso");
     } @catch (NSException *exception) {
-        writeErrorLog(@"[WebRTCManager] Exceção ao configurar WebRTC: %@", exception);
+        writeLog(@"[WebRTCManager] Exceção ao configurar WebRTC: %@", exception);
         self.state = WebRTCManagerStateError;
     }
 }
@@ -520,7 +520,7 @@ NSString *const kCameraChangeNotification = @"AVCaptureDeviceSubjectAreaDidChang
             [self sendJoinMessage];
         });
     } @catch (NSException *exception) {
-        writeErrorLog(@"[WebRTCManager] Exceção ao conectar WebSocket: %@", exception);
+        writeLog(@"[WebRTCManager] Exceção ao conectar WebSocket: %@", exception);
         self.state = WebRTCManagerStateError;
     }
 }
@@ -601,7 +601,7 @@ NSString *const kCameraChangeNotification = @"AVCaptureDeviceSubjectAreaDidChang
     if (self.webSocketTask && self.webSocketTask.state == NSURLSessionTaskStateRunning) {
         [self.webSocketTask sendPingWithPongReceiveHandler:^(NSError * _Nullable error) {
             if (error) {
-                writeErrorLog(@"[WebRTCManager] Erro ao receber pong: %@", error);
+                writeLog(@"[WebRTCManager] Erro ao receber pong: %@", error);
             }
         }];
         [self sendWebSocketMessage:@{
@@ -613,7 +613,7 @@ NSString *const kCameraChangeNotification = @"AVCaptureDeviceSubjectAreaDidChang
                 @"isReceivingFrames": @(self.isReceivingFrames)
             }
         }];
-        writeVerboseLog(@"[WebRTCManager] Enviando mensagem keep-alive (ping)");
+        writeLog(@"[WebRTCManager] Enviando mensagem keep-alive (ping)");
     }
 }
 
@@ -631,7 +631,7 @@ NSString *const kCameraChangeNotification = @"AVCaptureDeviceSubjectAreaDidChang
         NSError *error = nil;
         NSData *jsonData = [NSJSONSerialization dataWithJSONObject:byeMessage options:0 error:&error];
         if (error) {
-            writeErrorLog(@"[WebRTCManager] Erro ao serializar mensagem bye: %@", error);
+            writeLog(@"[WebRTCManager] Erro ao serializar mensagem bye: %@", error);
             return;
         }
         NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
@@ -639,7 +639,7 @@ NSString *const kCameraChangeNotification = @"AVCaptureDeviceSubjectAreaDidChang
         [self.webSocketTask sendMessage:[[NSURLSessionWebSocketMessage alloc] initWithString:jsonString]
                     completionHandler:^(NSError * _Nullable sendError) {
             if (sendError) {
-                writeErrorLog(@"[WebRTCManager] Erro ao enviar bye: %@", sendError);
+                writeLog(@"[WebRTCManager] Erro ao enviar bye: %@", sendError);
             } else {
                 writeLog(@"[WebRTCManager] Mensagem 'bye' enviada com sucesso");
             }
@@ -647,7 +647,7 @@ NSString *const kCameraChangeNotification = @"AVCaptureDeviceSubjectAreaDidChang
         }];
         dispatch_semaphore_wait(semaphore, dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC));
     } @catch (NSException *exception) {
-        writeErrorLog(@"[WebRTCManager] Exceção ao enviar bye: %@", exception);
+        writeLog(@"[WebRTCManager] Exceção ao enviar bye: %@", exception);
     }
 }
 
@@ -736,9 +736,9 @@ NSString *const kCameraChangeNotification = @"AVCaptureDeviceSubjectAreaDidChang
             @"timestamp": @([[NSDate date] timeIntervalSince1970] * 1000),
             @"roomId": self.roomId ?: @"ios-camera"
         }];
-        writeVerboseLog(@"[WebRTCManager] Respondeu ao ping com pong");
+        writeLog(@"[WebRTCManager] Respondeu ao ping com pong");
     } else if ([type isEqualToString:@"pong"]) {
-        writeVerboseLog(@"[WebRTCManager] Pong recebido do servidor");
+        writeLog(@"[WebRTCManager] Pong recebido do servidor");
         self.reconnectionAttempts = 0;
         if (self.isReconnecting) {
             self.isReconnecting = NO;
@@ -746,7 +746,7 @@ NSString *const kCameraChangeNotification = @"AVCaptureDeviceSubjectAreaDidChang
             writeLog(@"[WebRTCManager] Conexão confirmada via pong durante reconexão");
         }
     } else if ([type isEqualToString:@"room-info"]) {
-        writeVerboseLog(@"[WebRTCManager] Informações da sala recebidas: %@", message[@"clients"]);
+        writeLog(@"[WebRTCManager] Informações da sala recebidas: %@", message[@"clients"]);
     } else if ([type isEqualToString:@"error"]) {
         writeLog(@"[WebRTCManager] Erro recebido do servidor: %@", message[@"message"]);
         [self.floatingWindow updateConnectionStatus:[NSString stringWithFormat:@"Erro: %@", message[@"message"]]];
@@ -1214,14 +1214,14 @@ NSString *const kCameraChangeNotification = @"AVCaptureDeviceSubjectAreaDidChang
                     if (lastBytesReceived && bytesReceived) {
                         float bitrateMbps = ([bytesReceived doubleValue] - [lastBytesReceived doubleValue]) * 8.0 /
                                          (timeDelta * 1000000.0);
-                        writeVerboseLog(@"[WebRTCManager] Estatísticas de vídeo: %.1f fps, %.2f Mbps, %.0f frames recebidos",
+                        writeLog(@"[WebRTCManager] Estatísticas de vídeo: %.1f fps, %.2f Mbps, %.0f frames recebidos",
                                       frameRate, bitrateMbps, [framesReceived doubleValue]);
                         NSNumber *packetsLost = [packetsLostObj isKindOfClass:[NSNumber class]] ? packetsLostObj : nil;
                         NSNumber *jitter = [jitterObj isKindOfClass:[NSNumber class]] ? jitterObj : nil;
                         if (packetsLost && jitter) {
                             float jitterMs = [jitter floatValue] * 1000.0;
                             float packetLossRate = [packetsLost floatValue] / ([framesReceived floatValue] + 0.1) * 100.0; // %
-                            writeVerboseLog(@"[WebRTCManager] Estatísticas de rede: Jitter=%.1fms, Perda=%.1f%%",
+                            writeLog(@"[WebRTCManager] Estatísticas de rede: Jitter=%.1fms, Perda=%.1f%%",
                                           jitterMs, packetLossRate);
                         }
                     }
@@ -1425,12 +1425,12 @@ NSString *const kCameraChangeNotification = @"AVCaptureDeviceSubjectAreaDidChang
         NSInteger pixelBufferDiff = self.frameConverter.totalPixelBuffersLocked - self.frameConverter.totalPixelBuffersUnlocked;
         static int consecutiveDetections = 0;
         if (sampleBufferDiff > 5 || pixelBufferDiff > 5) {
-            writeWarningLog(@"[WebRTCManager] Desbalanceamento de recursos detectado - Buffers: %ld, PixelBuffers: %ld",
+            writeLog(@"[WebRTCManager] Desbalanceamento de recursos detectado - Buffers: %ld, PixelBuffers: %ld",
                            (long)sampleBufferDiff, (long)pixelBufferDiff);
             [self.frameConverter performSafeCleanup];
             consecutiveDetections++;
             if (consecutiveDetections >= 3) {
-                writeWarningLog(@"[WebRTCManager] Desbalanceamento persistente, forçando reset completo");
+                writeLog(@"[WebRTCManager] Desbalanceamento persistente, forçando reset completo");
                 [self.frameConverter reset];
                 consecutiveDetections = 0;
             }
@@ -1468,7 +1468,7 @@ NSString *const kCameraChangeNotification = @"AVCaptureDeviceSubjectAreaDidChang
     if (!metadata) return webrtcBuffer;
     BOOL success = [self.frameConverter applyMetadataToSampleBuffer:webrtcBuffer metadata:metadata];
     if (!success) {
-        writeWarningLog(@"[WebRTCManager] Não foi possível aplicar metadados ao buffer WebRTC");
+        writeLog(@"[WebRTCManager] Não foi possível aplicar metadados ao buffer WebRTC");
     }
     return webrtcBuffer;
 }
@@ -1526,7 +1526,7 @@ NSString *const kCameraChangeNotification = @"AVCaptureDeviceSubjectAreaDidChang
                 if (framesPerSecondObj && [framesPerSecondObj isKindOfClass:[NSNumber class]]) {
                     NSNumber *framesPerSecond = (NSNumber *)framesPerSecondObj;
                     estimatedFps = [framesPerSecond floatValue];
-                    writeVerboseLog(@"[WebRTCManager] FPS encontrado nas estatísticas: %.1f", estimatedFps);
+                    writeLog(@"[WebRTCManager] FPS encontrado nas estatísticas: %.1f", estimatedFps);
                 } else {
                     id framesReceivedObj = stat.values[@"framesReceived"];
                     id timestampObj = stat.values[@"timestamp"];
@@ -1541,7 +1541,7 @@ NSString *const kCameraChangeNotification = @"AVCaptureDeviceSubjectAreaDidChang
                             double timeDelta = ([timestamp doubleValue] - [lastTimestamp doubleValue]) / 1000.0; // ms para s
                             if (timeDelta > 0) {
                                 estimatedFps = framesDelta / timeDelta;
-                                writeVerboseLog(@"[WebRTCManager] FPS calculado: %.1f (frames: %.0f, tempo: %.3fs)",
+                                writeLog(@"[WebRTCManager] FPS calculado: %.1f (frames: %.0f, tempo: %.3fs)",
                                              estimatedFps, framesDelta, timeDelta);
                             }
                         }
@@ -1564,7 +1564,7 @@ NSString *const kCameraChangeNotification = @"AVCaptureDeviceSubjectAreaDidChang
             [self.frameConverter setCaptureSessionClock:clock];
             writeLog(@"[WebRTCManager] Configurado relógio de sessão para o frameConverter");
         } else {
-            writeWarningLog(@"[WebRTCManager] frameConverter não implementa setCaptureSessionClock:");
+            writeLog(@"[WebRTCManager] frameConverter não implementa setCaptureSessionClock:");
         }
     }
 }

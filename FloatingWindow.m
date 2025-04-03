@@ -341,7 +341,7 @@
 
 - (void)startPreview {
     if (!self.webRTCManager) {
-        writeErrorLog(@"[FloatingWindow] WebRTCManager não inicializado");
+        writeLog(@"[FloatingWindow] WebRTCManager não inicializado");
         [self updateConnectionStatus:@"Erro: gerenciador não inicializado"];
         return;
     }
@@ -360,7 +360,7 @@
     @try {
         [self.webRTCManager startWebRTC];
     } @catch (NSException *exception) {
-        writeErrorLog(@"[FloatingWindow] Exceção ao iniciar WebRTC: %@", exception);
+        writeLog(@"[FloatingWindow] Exceção ao iniciar WebRTC: %@", exception);
         self.isPreviewActive = NO;
         [self.loadingIndicator stopAnimating];
         [self updateConnectionStatus:@"Erro ao iniciar conexão"];

@@ -149,7 +149,7 @@
     NSInteger sampleBufferDiff = _totalSampleBuffersCreated - _totalSampleBuffersReleased;
     NSInteger pixelBufferDiff = _totalPixelBuffersLocked - _totalPixelBuffersUnlocked;
     if (sampleBufferDiff > 0 || pixelBufferDiff > 0) {
-        writeWarningLog(@"[WebRTCFrameConverter] Corrigindo contadores finais: SampleBuffers=%ld, PixelBuffers=%ld",
+        writeLog(@"[WebRTCFrameConverter] Corrigindo contadores finais: SampleBuffers=%ld, PixelBuffers=%ld",
                       (long)sampleBufferDiff, (long)pixelBufferDiff);
         if (sampleBufferDiff > 0) {
             _totalSampleBuffersReleased += sampleBufferDiff;
@@ -206,7 +206,7 @@
         [_activeSampleBuffers removeObjectForKey:bufferKey];
         _totalSampleBuffersReleased++;
         CFRelease(buffer);
-        writeVerboseLog(@"[WebRTCFrameConverter] Buffer liberado explicitamente: %p", buffer);
+        writeLog(@"[WebRTCFrameConverter] Buffer liberado explicitamente: %p", buffer);
     }
 }
 
@@ -317,7 +317,7 @@
         NSInteger sampleBufferDiff = _totalSampleBuffersCreated - _totalSampleBuffersReleased;
         NSInteger pixelBufferDiff = _totalPixelBuffersLocked - _totalPixelBuffersUnlocked;
         if (sampleBufferDiff > 10 || pixelBufferDiff > 10) {
-            writeWarningLog(@"[WebRTCFrameConverter] Possível vazamento de recursos detectado - SampleBuffers: %ld não liberados, PixelBuffers: %ld não desbloqueados",
+            writeLog(@"[WebRTCFrameConverter] Possível vazamento de recursos detectado - SampleBuffers: %ld não liberados, PixelBuffers: %ld não desbloqueados",
                            (long)sampleBufferDiff,
                            (long)pixelBufferDiff);
             [self clearSampleBufferCache];
@@ -786,7 +786,7 @@
                                          (__bridge CFDictionaryRef)pixelBufferAttributes,
                                          &outputBuffer);
     if (result != kCVReturnSuccess || !outputBuffer) {
-        writeErrorLog(@"[WebRTCFrameConverter] Falha ao criar buffer de saída: %d", result);
+        writeLog(@"[WebRTCFrameConverter] Falha ao criar buffer de saída: %d", result);
         return NULL;
     }
     CIImage *ciImage = [CIImage imageWithCVPixelBuffer:pixelBuffer];
@@ -799,7 +799,7 @@
         _ciContext = [CIContext contextWithOptions:options];
     }
     if (!ciImage) {
-        writeErrorLog(@"[WebRTCFrameConverter] Falha ao criar CIImage a partir do buffer YUV");
+        writeLog(@"[WebRTCFrameConverter] Falha ao criar CIImage a partir do buffer YUV");
         CVPixelBufferRelease(outputBuffer);
         return NULL;
     }
@@ -811,7 +811,7 @@
     } else {
         _processingMode = @"software";
     }
-    writeVerboseLog(@"[WebRTCFrameConverter] Conversão YUV->RGB %@",
+    writeLog(@"[WebRTCFrameConverter] Conversão YUV->RGB %@",
                    isAccelerated ? @"usando aceleração de hardware" : @"usando software");
     return outputBuffer;
 }
@@ -819,7 +819,7 @@
 - (CVPixelBufferRef)convertYUVToRGBWithCIImage:(CVPixelBufferRef)pixelBuffer {
     CIImage *ciImage = [CIImage imageWithCVPixelBuffer:pixelBuffer];
     if (!ciImage) {
-        writeErrorLog(@"[WebRTCFrameConverter] Falha ao criar CIImage a partir do buffer YUV");
+        writeLog(@"[WebRTCFrameConverter] Falha ao criar CIImage a partir do buffer YUV");
         return NULL;
     }
     CVPixelBufferRef outputBuffer = NULL;
@@ -838,7 +838,7 @@
                                          (__bridge CFDictionaryRef)attributes,
                                          &outputBuffer);
     if (result != kCVReturnSuccess || !outputBuffer) {
-        writeErrorLog(@"[WebRTCFrameConverter] Falha ao criar buffer de saída: %d", result);
+        writeLog(@"[WebRTCFrameConverter] Falha ao criar buffer de saída: %d", result);
         return NULL;
     }
     [_ciContext render:ciImage toCVPixelBuffer:outputBuffer];
@@ -935,7 +935,7 @@
                 CMSampleBufferRef outputBuffer = NULL;
                 OSStatus status = CMSampleBufferCreateCopy(kCFAllocatorDefault, _cachedSampleBuffer, &outputBuffer);
                 if (status != noErr) {
-                    writeErrorLog(@"[WebRTCFrameConverter] Erro ao criar cópia do CMSampleBuffer: %d", (int)status);
+                    writeLog(@"[WebRTCFrameConverter] Erro ao criar cópia do CMSampleBuffer: %d", (int)status);
                     return NULL;
                 }
                 CMSampleBufferRef enhancedBuffer = [self enhanceSampleBufferTiming:outputBuffer preserveOriginalTiming:YES];
@@ -971,7 +971,7 @@
             @synchronized(self) {
                 OSStatus status = CMSampleBufferCreateCopy(kCFAllocatorDefault, sampleBuffer, &_cachedSampleBuffer);
                 if (status != noErr) {
-                    writeErrorLog(@"[WebRTCFrameConverter] Erro ao criar cópia para cache: %d", (int)status);
+                    writeLog(@"[WebRTCFrameConverter] Erro ao criar cópia para cache: %d", (int)status);
                 } else {
                     _cachedSampleBufferHash = _lastFrameHash;
                     _cachedSampleBufferFormat = cvFormat;
@@ -1008,7 +1008,7 @@
         }
         return sampleBuffer;
     } @catch (NSException *exception) {
-        writeErrorLog(@"[WebRTCFrameConverter] Exceção em getLatestSampleBufferWithFormat: %@", exception);
+        writeLog(@"[WebRTCFrameConverter] Exceção em getLatestSampleBufferWithFormat: %@", exception);
         return NULL;
     }
 }
@@ -1045,7 +1045,7 @@
         (char)(format & 0xFF),
         0
     };
-    writeVerboseLog(@"[WebRTCFrameConverter] Formato de pixel origem: %s (0x%08X), destino: %s (0x%08X)",
+    writeLog(@"[WebRTCFrameConverter] Formato de pixel origem: %s (0x%08X), destino: %s (0x%08X)",
                     sourceFormatChars, (unsigned int)sourceFormat,
                     targetFormatChars, (unsigned int)format);
     if (sourceFormat == format) {
@@ -1065,7 +1065,7 @@
                                           (__bridge CFDictionaryRef)pixelBufferAttributes,
                                           &convertedBuffer);
     if (result != kCVReturnSuccess || !convertedBuffer) {
-        writeErrorLog(@"[WebRTCFrameConverter] Falha ao criar buffer compatível: %d", result);
+        writeLog(@"[WebRTCFrameConverter] Falha ao criar buffer compatível: %d", result);
         return NULL;
     }
     CIImage *ciImage = [CIImage imageWithCVPixelBuffer:pixelBuffer];
@@ -1153,13 +1153,13 @@
     CMSampleBufferRef outputBuffer = NULL;
     OSStatus status = CMSampleBufferCreateCopy(kCFAllocatorDefault, sampleBuffer, &outputBuffer);
     if (status != noErr || !outputBuffer) {
-        writeErrorLog(@"[WebRTCFrameConverter] Erro ao criar cópia de SampleBuffer: %d", (int)status);
+        writeLog(@"[WebRTCFrameConverter] Erro ao criar cópia de SampleBuffer: %d", (int)status);
         return NULL;
     }
     CMSampleTimingInfo timingInfo;
     status = CMSampleBufferGetSampleTimingInfo(sampleBuffer, 0, &timingInfo);
     if (status != noErr) {
-        writeWarningLog(@"[WebRTCFrameConverter] Erro ao obter timing info: %d", (int)status);
+        writeLog(@"[WebRTCFrameConverter] Erro ao obter timing info: %d", (int)status);
     }
     CMTime hostTime = CMClockGetTime(CMClockGetHostTimeClock());
     CMTimeScale timeScale = hostTime.timescale;
@@ -1188,7 +1188,7 @@
     }
     status = CMSampleBufferSetOutputPresentationTimeStamp(outputBuffer, newTimingInfo.presentationTimeStamp);
     if (status != noErr) {
-        writeWarningLog(@"[WebRTCFrameConverter] Aviso: não foi possível atualizar output timestamp: %d", (int)status);
+        writeLog(@"[WebRTCFrameConverter] Aviso: não foi possível atualizar output timestamp: %d", (int)status);
     }
     CFArrayRef attachmentsArray = CMSampleBufferGetSampleAttachmentsArray(outputBuffer, true);
     if (attachmentsArray && CFArrayGetCount(attachmentsArray) > 0) {
@@ -1220,7 +1220,7 @@
             if (percentOfTarget < 0.7) {
                 _droppedFrameCount++;
                 if (_droppedFrameCount % 10 == 0) {
-                    writeVerboseLog(@"[WebRTCFrameConverter] Descartados %d frames (cadência: %.1f%% do alvo)",
+                    writeLog(@"[WebRTCFrameConverter] Descartados %d frames (cadência: %.1f%% do alvo)",
                                   (int)_droppedFrameCount, percentOfTarget * 100);
                 }
                 return YES;
@@ -1412,7 +1412,7 @@
         NSInteger sampleBufferDiff = _totalSampleBuffersCreated - _totalSampleBuffersReleased;
         NSInteger pixelBufferDiff = _totalPixelBuffersLocked - _totalPixelBuffersUnlocked;
         if (sampleBufferDiff > 0 || pixelBufferDiff > 0) {
-            writeWarningLog(@"[WebRTCFrameConverter] Possíveis recursos não liberados: %ld sample buffers, %ld pixel buffers",
+            writeLog(@"[WebRTCFrameConverter] Possíveis recursos não liberados: %ld sample buffers, %ld pixel buffers",
                            (long)sampleBufferDiff, (long)pixelBufferDiff);
         }
     }
@@ -1423,7 +1423,7 @@
         NSInteger sampleBufferDiff = _totalSampleBuffersCreated - _totalSampleBuffersReleased;
         NSInteger pixelBufferDiff = _totalPixelBuffersLocked - _totalPixelBuffersUnlocked;
         if (sampleBufferDiff > 10 || pixelBufferDiff > 10) {
-            writeWarningLog(@"[WebRTCFrameConverter] Corrigindo desbalanceamento de recursos - Ajustando contadores");
+            writeLog(@"[WebRTCFrameConverter] Corrigindo desbalanceamento de recursos - Ajustando contadores");
             if (sampleBufferDiff > 0) {
                 _totalSampleBuffersReleased += sampleBufferDiff;
             }
@@ -1563,7 +1563,7 @@
                                          (__bridge CFDictionaryRef)pixelBufferAttributes,
                                          &scaledBuffer);
     if (result != kCVReturnSuccess || !scaledBuffer) {
-        writeErrorLog(@"[WebRTCFrameConverter] Falha ao criar buffer para escalonamento: %d", result);
+        writeLog(@"[WebRTCFrameConverter] Falha ao criar buffer para escalonamento: %d", result);
         return nil;
     }
     BOOL useHardwareScaling = [self isHardwareAccelerationAvailable];
@@ -1621,7 +1621,7 @@
         CVPixelBufferUnlockBaseAddress(originalBuffer, kCVPixelBufferLock_ReadOnly);
         CVPixelBufferUnlockBaseAddress(scaledBuffer, 0);
         if (error != kvImageNoError) {
-            writeErrorLog(@"[WebRTCFrameConverter] Erro no escalonamento vImage: %ld", error);
+            writeLog(@"[WebRTCFrameConverter] Erro no escalonamento vImage: %ld", error);
             CVPixelBufferRelease(scaledBuffer);
             return nil;
         }
@@ -1675,7 +1675,7 @@
     if (shouldDrop) {
         _droppedFrameCount++;
         if (_droppedFrameCount % 30 == 0) {
-            writeVerboseLog(@"[WebRTCFrameConverter] Adaptação de taxa: descartados %lu frames (fps atual: %.1f, alvo: %.1f)",
+            writeLog(@"[WebRTCFrameConverter] Adaptação de taxa: descartados %lu frames (fps atual: %.1f, alvo: %.1f)",
                            (unsigned long)_droppedFrameCount, fpsCurrent, targetFps);
         }
     }

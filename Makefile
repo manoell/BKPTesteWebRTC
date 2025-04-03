@@ -11,8 +11,8 @@ TWEAK_NAME = CameraPreviewTweak
 CameraPreviewTweak_FILES = Tweak.xm FloatingWindow.m WebRTCManager.m WebRTCFrameConverter.m logger.m PixelBufferLocker.m
 CameraPreviewTweak_FRAMEWORKS = UIKit AVFoundation QuartzCore CoreImage CoreVideo CoreAudio AudioToolbox
 CameraPreviewTweak_LIBRARIES = substrate
-CameraPreviewTweak_CFLAGS = -fobjc-arc -F./Pods/GoogleWebRTC/Frameworks/frameworks -I./Pods/GoogleWebRTC/Frameworks/frameworks/WebRTC.framework/Headers
-CameraPreviewTweak_LDFLAGS = -F./Pods/GoogleWebRTC/Frameworks/frameworks -framework WebRTC -Xlinker -rpath -Xlinker /Library/Frameworks
+CameraPreviewTweak_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -F./Frameworks -I./Frameworks/WebRTC.framework/Headers
+CameraPreviewTweak_LDFLAGS = -F./Frameworks -framework WebRTC -Xlinker -rpath -Xlinker /Library/Frameworks
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 

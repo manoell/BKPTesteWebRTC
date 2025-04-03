@@ -7,19 +7,11 @@
 extern "C" {
 #endif
 
+// Uma única função de log simples
 void writeLog(NSString *format, ...);
-void writeErrorLog(NSString *format, ...);
-void writeWarningLog(NSString *format, ...);
-void writeCriticalLog(NSString *format, ...);
-void writeVerboseLog(NSString *format, ...);
-void writeLogWithLevel(int level, NSString *message);
-void setLogLevel(int level);
-int getLogLevel(void);
-void setLogPath(NSString *path);
-NSString *getLogPath(void);
+
+// Função para limpar o arquivo de log
 void clearLogFile(void);
-NSDictionary *getLogStats(void);
-NSString *getLogContents(int maxLines);
 
 #ifdef __cplusplus
 }

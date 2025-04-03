@@ -9,7 +9,6 @@ static FloatingWindow *floatingWindow;
 
 - (void)applicationDidFinishLaunching:(id)application {
     %orig;
-    setLogLevel(5);
     writeLog(@"Tweak carregado em SpringBoard");
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         writeLog(@"Inicializando FloatingWindow");
