@@ -16,6 +16,7 @@ typedef NS_ENUM(NSInteger, WebRTCManagerState) {
     WebRTCManagerStateError,
     WebRTCManagerStateReconnecting
 };
+
 typedef NS_ENUM(NSInteger, WebRTCAdaptationMode) {
     WebRTCAdaptationModeAuto,
     WebRTCAdaptationModePerformance,
@@ -31,21 +32,12 @@ typedef NS_ENUM(NSInteger, WebRTCAdaptationMode) {
 @property (nonatomic, strong, readonly) WebRTCFrameConverter *frameConverter;
 @property (nonatomic, assign) WebRTCAdaptationMode adaptationMode;
 @property (nonatomic, assign) BOOL autoAdaptToCameraEnabled;
-@property (nonatomic, strong) NSTimer *keepAliveTimer;
-@property (nonatomic, strong) NSTimer *reconnectionTimer;
-@property (nonatomic, assign) int reconnectionAttempts;
-@property (nonatomic, assign) BOOL isReconnecting;
-@property (nonatomic, strong) dispatch_source_t resourceMonitorTimer;
-@property (nonatomic, strong) NSTimer *statsInterval;
-@property (nonatomic, strong) NSTimer *keepAliveInterval;
-@property (nonatomic, strong) NSURLSessionWebSocketTask *ws;
+@property (nonatomic, assign) BOOL isReceivingFrames;
 
 - (instancetype)initWithFloatingWindow:(FloatingWindow *)window;
 - (void)startWebRTC;
 - (void)stopWebRTC:(BOOL)userInitiated;
 - (void)sendByeMessage;
-- (NSDictionary *)getConnectionStats;
-- (void)removeRendererFromVideoTrack:(id<RTCVideoRenderer>)renderer;
 - (float)getEstimatedFps;
 - (void)adaptToNativeCameraWithPosition:(AVCaptureDevicePosition)position;
 - (void)setTargetResolution:(CMVideoDimensions)resolution;
@@ -53,6 +45,7 @@ typedef NS_ENUM(NSInteger, WebRTCAdaptationMode) {
 - (CMSampleBufferRef)getLatestVideoSampleBuffer;
 - (CMSampleBufferRef)getLatestVideoSampleBufferWithFormat:(IOSPixelFormat)format;
 - (void)setIOSCompatibilitySignaling:(BOOL)enable;
+- (void)updateConnectionStatus:(NSString *)status;
 
 @end
 
