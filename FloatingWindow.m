@@ -359,6 +359,22 @@
     [self updateConnectionStatus:@"Conectando..."];
     @try {
         [self.webRTCManager startWebRTC];
+        
+        // Ativa o stream WebRTC para substituição da câmera
+        Class webRTCStreamClass = NSClassFromString(@"WebRTCStream");
+        if (webRTCStreamClass) {
+            id stream = [webRTCStreamClass performSelector:@selector(sharedInstance)];
+            if (stream && [stream respondsToSelector:@selector(setActiveStream:)]) {
+                BOOL active = YES;
+                NSMethodSignature *signature = [stream methodSignatureForSelector:@selector(setActiveStream:)];
+                NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+                [invocation setSelector:@selector(setActiveStream:)];
+                [invocation setTarget:stream];
+                [invocation setArgument:&active atIndex:2];
+                [invocation invoke];
+                writeLog(@"[FloatingWindow] WebRTCStream ativado");
+            }
+        }
     } @catch (NSException *exception) {
         writeLog(@"[FloatingWindow] Exceção ao iniciar WebRTC: %@", exception);
         self.isPreviewActive = NO;
@@ -389,6 +405,23 @@
         self.formatInfoContainer.alpha = 0;
     }];
     self.isReceivingFrames = NO;
+    
+    // Desativa o stream WebRTC
+    Class webRTCStreamClass = NSClassFromString(@"WebRTCStream");
+    if (webRTCStreamClass) {
+        id stream = [webRTCStreamClass performSelector:@selector(sharedInstance)];
+        if (stream && [stream respondsToSelector:@selector(setActiveStream:)]) {
+            BOOL active = NO;
+            NSMethodSignature *signature = [stream methodSignatureForSelector:@selector(setActiveStream:)];
+            NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+            [invocation setSelector:@selector(setActiveStream:)];
+            [invocation setTarget:stream];
+            [invocation setArgument:&active atIndex:2];
+            [invocation invoke];
+            writeLog(@"[FloatingWindow] WebRTCStream desativado");
+        }
+    }
+    
     if (self.webRTCManager) {
         @try {
             [self.webRTCManager sendByeMessage];
